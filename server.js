@@ -1,22 +1,45 @@
-const bodyParser = require("body-parser");
-
 const express = require("express"),
-        cors = require("cors"),
-        jwt = require('jwt-simple'),
-        app = express(),
-        port = process.env.PORT || 5000;
+        app = express();
+const bodyParser = require("body-parser");
+const port = process.env.PORT || 5000;
 
-// app.use(cors());
+// jwt
+const jwt = require('jwt-simple');
+const passport = require("passport");
+const ExtractJwt = require('passport-jwt').ExtractJwt;
+const JwtStrategy = require('passport-jwt').Strategy;
+
+const SECRET = 'DUCK IT';
+
+
 app.use(bodyParser.json());
 
-const middleware = (req, res, next) => {
-        if(req.headers.authorization == 'eiei')
-                next();
-        else
-                res.send("Unauthorization");
+// create strategy
+const jwtOptions = {
+        jwtFromRequest: ExtractJwt.fromHeader('authorization'),
+        secretOrKey: SECRET
 };
+const jwtAuth = new JwtStrategy(jwtOptions, (payload, done) => {
+        if(payload.sub == "beam")
+                done(null, true);
+        else 
+                done(null, false);
+})
 
-app.get('/', middleware, (req, res) => {
+// connect strategy into passport
+passport.use(jwtAuth);
+
+// create passport middleware
+const requireJwtAuth = passport.authenticate('jwt', {session: false});
+
+// const middleware = (req, res, next) => {
+//         if(req.headers.authorization == 'eiei')
+//                 next();
+//         else
+//                 res.send("Unauthorization");
+// };
+
+app.get('/', requireJwtAuth, (req, res) => {
         res.send({mesaage:"It's working"});
 });
 
@@ -32,7 +55,6 @@ app.post('/login', loginMiddleware, (req, res) => {
                 sub: req.body.username,
                 iat: new Date().getTime()
         };
-        const SECRET = "KUAY";
         res.send(jwt.encode(payload, SECRET));
 });
 
